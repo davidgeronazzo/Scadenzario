@@ -27,13 +27,15 @@ def calcola_dt():
     stopping_scantime = starting_scantime
 
     delta_t = stopping_scantime - Now
-    delta_t = delta_t.seconds + dt.days * 3600 * 24
+    delta_t = delta_t.seconds + delta_t.days * 3600 * 24
+
     return delta_t
 
 
 def main():
 
     # trova il nome del file
+    os.chdir("Q:")
     Dir = os.listdir()
 
     found = 0
@@ -43,7 +45,7 @@ def main():
 
     while found == 0:
 
-        if Dir[i][0:11] == "Scadenzario":
+        if Dir[i][0:26] == "TEST_Scadenzario polizze_2":
             FileName = Dir[i]
             found = 1
         else:
@@ -94,4 +96,5 @@ def main():
 while True:
     main()
     dt = calcola_dt()
+    print("Prossimo alert tra: "+str(round(dt/3600/24)) + " giorni.")
     time.sleep(dt)
