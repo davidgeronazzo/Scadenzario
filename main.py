@@ -75,14 +75,14 @@ def main():
 
     while found == 0:
 
-        if Dir[i][0:26] == "TEST_Scadenzario polizze_2":
+        if Dir[i][0:21] == "Scadenzario polizze_2":
             FileName = Dir[i]
             found = 1
         else:
             i = i + 1
 
     Tab = pd.read_excel(FileName)
-    Tab["SCADENZA"] = pd.to_datetime(Tab["SCADENZA"])
+    Tab["SCADENZA"] = pd.to_datetime(Tab["SCADENZA"], dayfirst=True)
     Now = datetime.now()
     dt_2mesi = timedelta(days=60)
 
@@ -158,13 +158,12 @@ def main():
     bot = telebot.TeleBot(token)
     test_id = "-672088289"
     run_id = "-1001995962404"
-    bot.send_message(run_id, text=text, parse_mode='Markdown')
+    bot.send_message(test_id, text=text, parse_mode='Markdown')
 
     return dt
 
 
 while True:
     dt = main()
-
     print("Prossimo alert tra: "+str(round(dt/3600/24)) + " giorni.")
     time.sleep(dt)
