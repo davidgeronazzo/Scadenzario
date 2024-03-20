@@ -94,7 +94,8 @@ def main():
 
 
 while True:
+
     main()
-    dt = calcola_dt()
+    dt = 60*60
     print("Prossimo alert tra: "+str(round(dt/3600/24)) + " giorni.")
     time.sleep(dt)
