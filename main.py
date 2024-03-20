@@ -129,7 +129,6 @@ def main():
                   ScadenzaString + "\n \n")
         text = text + string
 
-
     for i in range(len(SecondTab)):
 
         Scadenza = SecondTab["SCADENZA"].iloc[i]
