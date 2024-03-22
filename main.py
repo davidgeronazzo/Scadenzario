@@ -7,183 +7,160 @@ import telebot
 
 def calcola_dt():
 
-    Now = datetime.now()
+    now_dt = datetime.now()
 
-    starting_scantime = datetime(Now.year, Now.month, Now.day, 8, 30)
+    starting_scantime = datetime(now_dt.year, now_dt.month, now_dt.day, 8, 30)
 
-    if Now.weekday() == 0:
-        starting_scantime = Now + timedelta(days=1)
-    weekDay = starting_scantime.weekday()
+    if now_dt.weekday() == 0:
+        starting_scantime = now_dt + timedelta(days=1)
+    week_day = starting_scantime.weekday()
 
-    while weekDay != 0:
+    while week_day != 0:
         starting_scantime = starting_scantime + timedelta(days=1)
-        weekDay = starting_scantime.weekday()
+        week_day = starting_scantime.weekday()
 
     stopping_scantime = starting_scantime
 
-    delta_t = stopping_scantime - Now
+    delta_t = stopping_scantime - now_dt
     delta_t = delta_t.seconds + delta_t.days * 3600 * 24
 
     month = stopping_scantime.month
 
     if month == 1:
-        Mese = "gennaio"
+        mese = "gennaio"
     elif month == 2:
-        Mese = "febbraio"
+        mese = "febbraio"
     elif month == 3:
-        Mese = "marzo"
+        mese = "marzo"
     elif month == 4:
-        Mese = "aprile"
+        mese = "aprile"
     elif month == 5:
-        Mese = "maggio"
+        mese = "maggio"
     elif month == 6:
-        Mese = "giugno"
+        mese = "giugno"
     elif month == 7:
-        Mese = "luglio"
+        mese = "luglio"
     elif month == 8:
-        Mese = "agosto"
+        mese = "agosto"
     elif month == 9:
-        Mese = "settembre"
+        mese = "settembre"
     elif month == 10:
-        Mese = "ottobre"
+        mese = "ottobre"
     elif month == 11:
-        Mese = "novembre"
+        mese = "novembre"
     elif month == 12:
-        Mese = "dicembre"
+        mese = "dicembre"
     else:
-        Mese = ""
+        mese = ""
 
-    dataString = ("Il prossimo alert arriverà lunedì " + str(stopping_scantime.day) + " " + Mese + " "
-                  + str(stopping_scantime.year))
+    data_string = ("Il prossimo alert arriverà lunedì " + str(stopping_scantime.day) + " " + mese + " "
+                   + str(stopping_scantime.year))
 
-    return stopping_scantime, dataString, delta_t
+    return stopping_scantime, data_string, delta_t
 
 
-def trovaFile():
+def trova_file():
     # trova il nome del file
-    os.chdir("Q:")
-    Dir = os.listdir()
+    os.chdir("Z:")
+    server_dir = os.listdir()
 
     found = 0
 
     i = 0
-    ScadenzarioFileName = []
+    scadenzario_file_name = []
 
     while found == 0:
 
-        if Dir[i][0:21] == "Scadenzario polizze_2":
-            ScadenzarioFileName = Dir[i]
+        if server_dir[i][0:21] == "Scadenzario polizze_2":
+            scadenzario_file_name = server_dir[i]
             found = 1
         else:
             i = i + 1
 
-    return ScadenzarioFileName
+    return scadenzario_file_name
 
 
 def main():
 
     # trova il nome del file
 
-    os.chdir("Q:")
-    Dir = os.listdir()
+    scadenzario_file_name = trova_file()
 
-    found = 0
-
-    i = 0
-    ScadenzarioFileName = []
-
-    while found == 0:
-
-        if Dir[i][0:21] == "Scadenzario polizze_2":
-            ScadenzarioFileName = Dir[i]
-            found = 1
-
-        else:
-            i = i + 1
-
-    Tab = pd.read_excel(ScadenzarioFileName)
-    Tab["SCADENZA"] = pd.to_datetime(Tab["SCADENZA"], dayfirst=True)
-    Now = datetime.now()
+    tab = pd.read_excel(scadenzario_file_name)
+    tab["SCADENZA"] = pd.to_datetime(tab["SCADENZA"], dayfirst=True)
+    now_main = datetime.now()
     dt_2mesi = timedelta(days=60)
 
-    deadline = Now + dt_2mesi
+    deadline = now_main + dt_2mesi
 
     # seleziono le scadenze che mi interessano
-    SelTab = Tab[Tab["SCADENZA"] <= deadline]
+    sel_tab = tab[tab["SCADENZA"] <= deadline]
 
     # riordino la tabella in base alla data
 
-    Scadenze = SelTab["SCADENZA"]
-    timesLeft = Now - Scadenze
-    timesLeft = timesLeft.apply(lambda x: x.days)
-    SelTab["Tempo residuo"] = timesLeft
+    scadenze = sel_tab["SCADENZA"]
+    times_left = now_main - scadenze
+    times_left = times_left.apply(lambda x: x.days)
+    sel_tab["Tempo residuo"] = times_left
 
-    firstTab = SelTab[SelTab["Tempo residuo"] <= 0]
-    firstTab = firstTab.sort_values(by=["SCADENZA"])
+    first_tab = sel_tab[sel_tab["Tempo residuo"] <= 0]
+    first_tab = first_tab.sort_values(by=["SCADENZA"])
 
-    SecondTab = SelTab[SelTab["Tempo residuo"] > 0]
-    SecondTab = SecondTab.sort_values(by=["SCADENZA"], ascending=False)
+    second_tab = sel_tab[sel_tab["Tempo residuo"] > 0]
+    second_tab = second_tab.sort_values(by=["SCADENZA"], ascending=False)
 
     text = "*OCCHIO alle scadenze!*\n \n"
 
-    for i in range(len(firstTab)):
+    symbol = "⚠️"
+    sign = ""
 
-        Scadenza = firstTab["SCADENZA"].iloc[i]
-        Polizza = firstTab["Tipologia polizza"].iloc[i]
-        Riferimento = firstTab["Riferimento"].iloc[i]
+    for i in range(len(first_tab)):
 
-        timeLeft = Now - Scadenza
-        timeLeft = timeLeft.days
+        scadenza = first_tab["SCADENZA"].iloc[i]
+        polizza = first_tab["Tipologia polizza"].iloc[i]
+        riferimento = first_tab["Riferimento"].iloc[i]
 
-        if timeLeft <= 0:
-            symbol = "⚠️"
-            sign = ""
-        else:
-            symbol = "❌"
-            sign = "+"
+        time_left = now_main - scadenza
+        time_left = time_left.days
 
-        ScadenzaString = datetime.strftime(Scadenza, "%d/%m/%Y")
-        Compagnia = firstTab["Compagnia assicurativa"].iloc[i]
-        string = (sign+str(timeLeft) + " " + symbol + " Polizza "+Polizza + " " + Compagnia + " in scadenza il " +
-                  ScadenzaString + " - " + str(Riferimento) + "\n \n")
+        scadenza_string = datetime.strftime(scadenza, "%d/%m/%Y")
+        compagnia = first_tab["Compagnia assicurativa"].iloc[i]
+        string = (sign + str(time_left) + " " + symbol + " polizza " + polizza + " " + compagnia + " in scadenza il " +
+                  scadenza_string + " - " + str(riferimento) + "\n \n")
         text = text + string
 
-    for i in range(len(SecondTab)):
+    symbol = "❌"
+    sign = "+"
 
-        Scadenza = SecondTab["SCADENZA"].iloc[i]
-        Polizza = SecondTab["Tipologia polizza"].iloc[i]
-        Nota = str(SecondTab["NOTE"].iloc[i])
-        Riferimento = firstTab["Riferimento"].iloc[i]
+    for i in range(len(second_tab)):
 
-        if Nota == "nan":
-            Nota = ""
+        scadenza = second_tab["SCADENZA"].iloc[i]
+        polizza = second_tab["Tipologia polizza"].iloc[i]
+        nota = str(second_tab["NOTE"].iloc[i])
+        riferimento = second_tab["Riferimento"].iloc[i]
 
-        timeLeft = Now - Scadenza
-        timeLeft = timeLeft.days
+        if nota == "nan":
+            nota = ""
 
-        if timeLeft <= 0:
-            symbol = "⚠️"
-            sign = ""
-        else:
-            symbol = "❌"
-            sign = "+"
+        time_left = now_main - scadenza
+        time_left = time_left.days
 
-        ScadenzaString = datetime.strftime(Scadenza, "%d/%m/%Y")
-        Compagnia = SecondTab["Compagnia assicurativa"].iloc[i]
-        string = (sign+str(timeLeft) + " " + str(Nota) + " " + symbol + " Polizza "+Polizza + " " + Compagnia +
-                  " scaduta il " + ScadenzaString + " - " + Riferimento + "\n \n")
+        scadenza_string = datetime.strftime(scadenza, "%d/%m/%Y")
+        compagnia = second_tab["Compagnia assicurativa"].iloc[i]
+        string = (sign + str(time_left) + " " + str(nota) + " " + symbol + " polizza " + polizza + " " + compagnia +
+                  " scaduta il " + scadenza_string + " - " + riferimento + "\n \n")
         text = text + string
 
-    t, dataString, tLeft = calcola_dt()
-    text = text + dataString
+    t, data_string, t_left = calcola_dt()
+    text = text + data_string
 
     token = "6007635672:AAF_kA2nV4mrscssVRHW0Fgzsx0DjeZQIHU"
     bot = telebot.TeleBot(token)
     test_id = "-672088289"
     run_id = "-1001995962404"
-    bot.send_message(test_id, text=text, parse_mode='Markdown')
+    bot.send_message(run_id, text=text, parse_mode='Markdown')
 
-    return tLeft, t
+    return t_left, t
 
 
 now = datetime.now()
@@ -197,8 +174,8 @@ while True:
     last_modify = last_modify["last_modify"][0]
     last_modify = pd.to_datetime(last_modify)
     # last_modify = datetime.hrtime(last_modify)
-    FileName = trovaFile()
-    modify_time = os.path.getmtime("Q:"+FileName)
+    FileName = trova_file()
+    modify_time = os.path.getmtime("Z:"+FileName)
     modify_time = datetime.fromtimestamp(modify_time)
 
     # modify_time = last_modify[0]
