@@ -132,8 +132,8 @@ def calcola_dt():
 def trova_file():
     # trova il nome del file
 
-    # os.chdir("Z:") # run PC
-    os.chdir("Q:")  # my PC
+    os.chdir("Z:") # run PC
+    # os.chdir("Q:")  # my PC
 
     server_dir = os.listdir()
 
@@ -188,7 +188,7 @@ while True:
     RunDisk = "Z"
     TestDisk = "Q"
 
-    currDisk = TestDisk
+    currDisk = RunDisk
 
     curr_dir = os.getcwd()
     now = datetime.now()
