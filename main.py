@@ -2,7 +2,77 @@ import pandas as pd
 import time
 from datetime import datetime, timedelta
 import os
-import telebot
+from TelegramMessageCenter import segnalaErrore, mandaScadenze
+
+
+def preparaResoconto(tab, Mode):
+    now_main = datetime.now()
+    dt_2mesi = timedelta(days=60)
+
+    deadline = now_main + dt_2mesi
+
+    # seleziono le scadenze che mi interessano
+    sel_tab = tab[tab["SCADENZA"] <= deadline]
+
+    # riordino la tabella in base alla data
+
+    scadenze = sel_tab["SCADENZA"]
+    times_left = now_main - scadenze
+    times_left = times_left.apply(lambda x: x.days)
+    sel_tab["Tempo residuo"] = times_left
+
+    first_tab = sel_tab[sel_tab["Tempo residuo"] <= 0]
+    first_tab = first_tab.sort_values(by=["SCADENZA"])
+    second_tab = sel_tab[sel_tab["Tempo residuo"] > 0]
+    second_tab = second_tab.sort_values(by=["SCADENZA"], ascending=False)
+
+    text = "*OCCHIO alle scadenze!*\n \n"
+
+    symbol = "⚠️"
+    sign = ""
+
+    for i in range(len(first_tab)):
+
+        scadenza = first_tab["SCADENZA"].iloc[i]
+        polizza = first_tab["Tipologia polizza"].iloc[i]
+        riferimento = first_tab["Riferimento"].iloc[i]
+
+        time_left = now_main - scadenza
+        time_left = time_left.days
+
+        scadenza_string = datetime.strftime(scadenza, "%d/%m/%Y")
+        compagnia = first_tab["Compagnia assicurativa"].iloc[i]
+        string = (sign + str(time_left) + " " + symbol + " polizza " + polizza + " " + compagnia + " in scadenza il " +
+                  scadenza_string + " - " + str(riferimento) + "\n \n")
+        text = text + string
+
+    symbol = "❌"
+    sign = "+"
+
+    for i in range(len(second_tab)):
+
+        scadenza = second_tab["SCADENZA"].iloc[i]
+        polizza = second_tab["Tipologia polizza"].iloc[i]
+        nota = str(second_tab["NOTE"].iloc[i])
+        riferimento = second_tab["Riferimento"].iloc[i]
+
+        if nota == "nan":
+            nota = ""
+
+        time_left = now_main - scadenza
+        time_left = time_left.days
+
+        scadenza_string = datetime.strftime(scadenza, "%d/%m/%Y")
+        compagnia = second_tab["Compagnia assicurativa"].iloc[i]
+        string = (sign + str(time_left) + " " + str(nota) + " " + symbol + " polizza " + polizza + " " + compagnia +
+                  " scaduta il " + scadenza_string + " - " + riferimento + "\n \n")
+        text = text + string
+
+    t, data_string, t_left = calcola_dt()
+    text = text + data_string
+
+    mandaScadenze(Mode, text)
+    return t_left, t
 
 
 def calcola_dt():
@@ -61,7 +131,10 @@ def calcola_dt():
 
 def trova_file():
     # trova il nome del file
-    os.chdir("Z:")
+
+    # os.chdir("Z:") # run PC
+    os.chdir("Q:")  # my PC
+
     server_dir = os.listdir()
 
     found = 0
@@ -82,83 +155,27 @@ def trova_file():
 
 def main():
 
-    # trova il nome del file
-
+    Mode = "TEST"
+    t_left = []
+    t = []
     scadenzario_file_name = trova_file()
 
     tab = pd.read_excel(scadenzario_file_name)
-    tab["SCADENZA"] = pd.to_datetime(tab["SCADENZA"], dayfirst=True)
-    now_main = datetime.now()
-    dt_2mesi = timedelta(days=60)
 
-    deadline = now_main + dt_2mesi
+    try:
+        tab["SCADENZA"] = pd.to_datetime(tab["SCADENZA"], dayfirst=True)
+        t_left, t = preparaResoconto(tab, Mode)
+        t_left = "Prossimo alert tra: "+str(round(dtLeft/3600/24)) + " giorni."
 
-    # seleziono le scadenze che mi interessano
-    sel_tab = tab[tab["SCADENZA"] <= deadline]
-
-    # riordino la tabella in base alla data
-
-    scadenze = sel_tab["SCADENZA"]
-    times_left = now_main - scadenze
-    times_left = times_left.apply(lambda x: x.days)
-    sel_tab["Tempo residuo"] = times_left
-
-    first_tab = sel_tab[sel_tab["Tempo residuo"] <= 0]
-    first_tab = first_tab.sort_values(by=["SCADENZA"])
-
-    second_tab = sel_tab[sel_tab["Tempo residuo"] > 0]
-    second_tab = second_tab.sort_values(by=["SCADENZA"], ascending=False)
-
-    text = "*OCCHIO alle scadenze!*\n \n"
-
-    symbol = "⚠️"
-    sign = ""
-
-    for i in range(len(first_tab)):
-
-        scadenza = first_tab["SCADENZA"].iloc[i]
-        polizza = first_tab["Tipologia polizza"].iloc[i]
-        riferimento = first_tab["Riferimento"].iloc[i]
-
-        time_left = now_main - scadenza
-        time_left = time_left.days
-
-        scadenza_string = datetime.strftime(scadenza, "%d/%m/%Y")
-        compagnia = first_tab["Compagnia assicurativa"].iloc[i]
-        string = (sign + str(time_left) + " " + symbol + " polizza " + polizza + " " + compagnia + " in scadenza il " +
-                  scadenza_string + " - " + str(riferimento) + "\n \n")
-        text = text + string
-
-    symbol = "❌"
-    sign = "+"
-
-    for i in range(len(second_tab)):
-
-        scadenza = second_tab["SCADENZA"].iloc[i]
-        polizza = second_tab["Tipologia polizza"].iloc[i]
-        nota = str(second_tab["NOTE"].iloc[i])
-        riferimento = second_tab["Riferimento"].iloc[i]
-
-        if nota == "nan":
-            nota = ""
-
-        time_left = now_main - scadenza
-        time_left = time_left.days
-
-        scadenza_string = datetime.strftime(scadenza, "%d/%m/%Y")
-        compagnia = second_tab["Compagnia assicurativa"].iloc[i]
-        string = (sign + str(time_left) + " " + str(nota) + " " + symbol + " polizza " + polizza + " " + compagnia +
-                  " scaduta il " + scadenza_string + " - " + riferimento + "\n \n")
-        text = text + string
-
-    t, data_string, t_left = calcola_dt()
-    text = text + data_string
-
-    token = "6007635672:AAF_kA2nV4mrscssVRHW0Fgzsx0DjeZQIHU"
-    bot = telebot.TeleBot(token)
-    test_id = "-672088289"
-    run_id = "-1001995962404"
-    bot.send_message(run_id, text=text, parse_mode='Markdown')
+    except Exception as err:
+        errString = str(err)
+        if errString[:4] == "year":
+            annoSbagliato = errString[5:11]
+            text = "E' stato inserito l'anno anomalo "+annoSbagliato+"\nProssimo alert tra 2 ore."
+            segnalaErrore(Mode, text)
+            print(err)
+            t = datetime.now() + timedelta(hours=2)
+            t_left = "Prossimo alert tra 2 ore"
 
     return t_left, t
 
@@ -168,6 +185,11 @@ NextSend = now - timedelta(hours=1)
 
 while True:
 
+    RunDisk = "Z"
+    TestDisk = "Q"
+
+    currDisk = TestDisk
+
     curr_dir = os.getcwd()
     now = datetime.now()
     last_modify = pd.read_csv("last_modify.csv")
@@ -175,7 +197,7 @@ while True:
     last_modify = pd.to_datetime(last_modify)
     # last_modify = datetime.hrtime(last_modify)
     FileName = trova_file()
-    modify_time = os.path.getmtime("Z:"+FileName)
+    modify_time = os.path.getmtime(currDisk+":"+FileName)
     modify_time = datetime.fromtimestamp(modify_time)
 
     # modify_time = last_modify[0]
@@ -186,9 +208,9 @@ while True:
         modify_time_df = pd.DataFrame(modify_time_dict, index=[0])
         os.chdir(curr_dir)
         modify_time_df.to_csv("last_modify.csv", index=False)
-        print("Prossimo alert tra: "+str(round(dtLeft/3600/24)) + " giorni.")
 
-    os.chdir(curr_dir)
+        os.chdir(curr_dir)
+        print(dtLeft)
 
     dt = 60
     time.sleep(dt)
