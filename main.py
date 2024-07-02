@@ -3,7 +3,27 @@ import time
 from datetime import datetime, timedelta
 import os
 from TelegramMessageCenter import segnalaErrore, mandaScadenze
+import csv
+from ftplib import FTP
+def salvaWatchdog():
+    now = datetime.now()
+    ultimo_ciclo = {"t": now}
 
+    with open("lastRunScadenzario.csv", 'w') as csvfile:
+
+        writer = csv.DictWriter(csvfile, ultimo_ciclo.keys())
+        writer.writeheader()
+        writer.writerow(ultimo_ciclo)
+
+    ftp = FTP("192.168.10.211", timeout=120)
+    ftp.login('ftpdaticentzilio', 'Sd2PqAS.We8zBK')
+
+    ftp.cwd('/dati/Database_Produzione')
+
+    file_name = "lastRunScadenzario.csv"
+    file = open(file_name, "rb")
+    ftp.storbinary(f"STOR " + file_name, file)
+    ftp.close()
 
 def preparaResoconto(tab, Mode):
     now_main = datetime.now()
@@ -72,6 +92,8 @@ def preparaResoconto(tab, Mode):
     text = text + data_string
 
     mandaScadenze(Mode, text)
+
+    t_left = "Prossimo alert tra "
     return t_left, t
 
 
@@ -125,15 +147,15 @@ def calcola_dt():
 
     data_string = ("Il prossimo alert arriverà lunedì " + str(stopping_scantime.day) + " " + mese + " "
                    + str(stopping_scantime.year))
-
+    print(data_string)
     return stopping_scantime, data_string, delta_t
 
 
 def trova_file():
     # trova il nome del file
 
-    os.chdir("Z:") # run PC
-    # os.chdir("Q:")  # my PC
+    # os.chdir("Z:") # run PC
+    os.chdir("Q:")  # my PC
 
     server_dir = os.listdir()
 
@@ -174,7 +196,7 @@ def main():
             text = "E' stato inserito l'anno anomalo "+annoSbagliato+"\nProssimo alert tra 2 ore."
             segnalaErrore(Mode, text)
             print(err)
-            t = datetime.now() + timedelta(hours=2)
+            t = datetime.now() + timedelta(seconds=15)
             t_left = "Prossimo alert tra 2 ore"
 
     return t_left, t
@@ -188,10 +210,12 @@ while True:
     RunDisk = "Z"
     TestDisk = "Q"
 
-    currDisk = RunDisk
+    currDisk = TestDisk
 
     curr_dir = os.getcwd()
     now = datetime.now()
+    os.chdir(curr_dir)
+
     last_modify = pd.read_csv("last_modify.csv")
     last_modify = last_modify["last_modify"][0]
     last_modify = pd.to_datetime(last_modify)
@@ -206,11 +230,12 @@ while True:
         dtLeft, NextSend = main()
         modify_time_dict = {"last_modify": modify_time}
         modify_time_df = pd.DataFrame(modify_time_dict, index=[0])
-        os.chdir(curr_dir)
         modify_time_df.to_csv("last_modify.csv", index=False)
 
         os.chdir(curr_dir)
-        print(dtLeft)
 
-    dt = 60
+
+    salvaWatchdog()
+
+    dt = 15
     time.sleep(dt)
